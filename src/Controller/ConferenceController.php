@@ -2,18 +2,40 @@
 
 namespace App\Controller;
 
-
+use App\Repository\ConferenceRepository;
+use App\Repository\CommentRepository;
+use App\Entity\Conference;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
+
 
 final class ConferenceController extends AbstractController
 {
     #[Route('/',  name: 'homepage')]
-    public function index(Request $req): Response
+    public function index(ConferenceRepository $conferenceRepo): Response
     {
-        return $this->render('conference/index.html.twig');
+        return $this->render('conference/index.html.twig', [
+            'conferences' => $conferenceRepo->findAll(),
+        ]);
 
+    }
+
+    #[Route('/conference/{slug:conference}', name: 'conference')]
+    public function show(Conference $conference, CommentRepository $commentRepository, ConferenceRepository $conferenceRepository, #[MapQueryParameter(options: ['min_range' => 0])] int $offset = 0): Response
+     {
+        $paginator = $commentRepository->getCommentPaginator($conference, $offset);
+            {
+                return $this->render('conference/show.html.twig', [
+                    'conferences' => $conferenceRepository->findAll(),
+                    'conference' => $conference,
+                    'comments' => $paginator,
+                    'previous' => $offset - CommentRepository::COMMENTS_PER_PAGE,
+                    'next'     => min(count($paginator), $offset + CommentRepository::COMMENTS_PER_PAGE),
+                    
+                ]);
+            }
     }
 }
